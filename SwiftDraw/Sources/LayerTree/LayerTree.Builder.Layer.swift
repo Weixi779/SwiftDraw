@@ -64,8 +64,66 @@ extension LayerTree.Builder {
         att.fontName = text.attributes.fontFamily ?? att.fontName
         att.size = text.attributes.fontSize ?? att.size
         att.anchor = text.attributes.textAnchor ?? att.anchor
+        
+        // Apply CJK font fallback if needed
+        att.fontName = applyCJKFontFallback(fontName: att.fontName, text: text.value)
+        
         point.x += makeXOffset(for: text.value, with: att)
         return .text(text.value, point, att)
+    }
+    
+    /// Apply CJK font fallback for better text rendering
+    static func applyCJKFontFallback(fontName: String, text: String) -> String {
+        // Check if text contains CJK characters
+        let containsCJK = text.range(of: "[\\u4E00-\\u9FFF\\u3400-\\u4DBF\\u3040-\\u309F\\u30A0-\\u30FF\\uAC00-\\uD7AF]", options: .regularExpression) != nil
+        
+        // Only apply CJK font fallback if text actually contains CJK characters
+        if containsCJK {
+            return getBestCJKFont(for: text, basedOn: fontName)
+        }
+        
+        // For non-CJK text, keep original font
+        return fontName
+    }
+    
+    /// Get the best CJK font based on the text content and region
+    static func getBestCJKFont(for text: String, basedOn fontName: String) -> String {
+        // Detect primary script type
+        let hasChineseSimplified = text.range(of: "[\\u4E00-\\u9FFF]", options: .regularExpression) != nil
+        let hasJapanese = text.range(of: "[\\u3040-\\u309F\\u30A0-\\u30FF]", options: .regularExpression) != nil  
+        let hasKorean = text.range(of: "[\\uAC00-\\uD7AF]", options: .regularExpression) != nil
+        
+        // If already a good CJK font, keep it
+        if fontName.contains("PingFang") || fontName.contains("Hiragino") || 
+           fontName.contains("STHeiti") || fontName.contains("Apple SD Gothic") ||
+           fontName.contains("SF") {
+            return fontName
+        }
+        
+        // Choose best font based on script and style
+        #if os(iOS)
+        if hasKorean {
+            return fontName.lowercased().contains("serif") ? "Apple SD Gothic Neo" : "Apple SD Gothic Neo"
+        } else if hasJapanese {
+            return fontName.lowercased().contains("serif") ? "Hiragino Mincho ProN" : "Hiragino Sans"
+        } else if hasChineseSimplified {
+            return fontName.lowercased().contains("serif") ? "Songti SC" : "PingFang SC"
+        } else {
+            // Default fallback for mixed or unknown CJK
+            return "PingFang SC"
+        }
+        #else
+        // macOS similar logic
+        if hasKorean {
+            return "Apple SD Gothic Neo"
+        } else if hasJapanese {
+            return fontName.lowercased().contains("serif") ? "Hiragino Mincho ProN" : "Hiragino Sans"
+        } else if hasChineseSimplified {
+            return fontName.lowercased().contains("serif") ? "Songti SC" : "PingFang SC"
+        } else {
+            return "PingFang SC"
+        }
+        #endif
     }
 
     static func makeImageContents(from image: DOM.Image) throws -> LayerTree.Layer.Contents {
