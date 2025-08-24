@@ -103,17 +103,18 @@ extension LayerTree.Builder {
         // Choose best font based on script and style
         #if os(iOS)
         if hasKorean {
-            return fontName.lowercased().contains("serif") ? "Apple SD Gothic Neo" : "Apple SD Gothic Neo"
+            return "Apple SD Gothic Neo"
         } else if hasJapanese {
-            return fontName.lowercased().contains("serif") ? "Hiragino Mincho ProN" : "Hiragino Sans"
+            return fontName.lowercased().contains("serif") ? "HiraginoSans-W6" : "HiraginoSans-W3"
         } else if hasChineseSimplified {
-            return fontName.lowercased().contains("serif") ? "Songti SC" : "PingFang SC"
+            // iOS uses exact font family names
+            return fontName.lowercased().contains("serif") ? "PingFangSC-Regular" : "PingFangSC-Regular"
         } else {
             // Default fallback for mixed or unknown CJK
-            return "PingFang SC"
+            return "PingFangSC-Regular"
         }
         #else
-        // macOS similar logic
+        // macOS uses display names
         if hasKorean {
             return "Apple SD Gothic Neo"
         } else if hasJapanese {
